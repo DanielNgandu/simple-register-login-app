@@ -11,7 +11,9 @@ if (isset($_SESSION["userId"])) {
     // Could not get the data that should have been sent.
     echo "Welcome!";
 }else{
-	exit('Please login to access this page.');
+	echo('Please login to access this page.');
+	//if user not logged in,throw them back to login page
+    header("Location:login.php");
 }
 
 
