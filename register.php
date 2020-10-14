@@ -1,21 +1,68 @@
 <?php
 
-//includ the connection file here
+//include the connection file here
 // As the name suggests, the file will be included just once.
-include_once 'connection.php';
+require_once 'connection.php';
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+//declare variables
+    $email = "";
+    $password = "";
 
+//throw our users input to a function that will clean the input then reassign it back
+    $username = sanitize_input($_POST["username"]);
+    $password = sanitize_input($_POST["password"]);
+    // Prepare our SQL, preparing the SQL statement will prevent SQL injection.
+    if ($stmt = $conn->prepare("INSERT INTO users (username, password) VALUES(?,?)")) {
+        // Bind parameters
+        $stmt->bindParam(1,$username, PDO::PARAM_STR); // Attempt to execute the prepared statement
+        $stmt->bindParam(2, $password, PDO::PARAM_STR); // Attempt to execute the prepared statement
 
-// Prepare our SQL, preparing the SQL statement will prevent SQL injection.
-if ($stmt = $conn->prepare('SELECT id, password FROM accounts WHERE username = ?')) {
-	// Bind parameters (s = string, i = int, b = blob, etc), in our case the username is a string so we use "s"
-	$stmt->bind_param('s', $_POST['username']);
-	$stmt->execute();
-	// Store the result so we can check if the account exists in the database.
-	$stmt->store_result();
+        $stmt->execute();
 
+        //after successful registration, log user in
+        $stmt1 = $conn->prepare("SELECT id,username,password FROM users WHERE username =:username");
+        // Bind parameters
+        $stmt1->bindParam(":username", $username, PDO::PARAM_STR); // Attempt to execute the prepared statement
+        if ($stmt1->execute()) {
+            //when we find it, then we get that password and then compare with the one inputed
+            if ($stmt1->rowCount() == 1) {
+                //check if passwords match then login user
+                while ($row = $stmt1->fetch()) {
+                    //setting the userId session
+                    $_SESSION["userId"] = $row['id'];
+                    $db_password = $row['password'];
+                }
+                //check if passwords match,basically compare the inputed password vs the one on  the db
+                if ($db_password == $password) {
+                    echo "login successful!";
 
-	$stmt->close();
+                    header("location:index.php");
+                } else {
+                    echo "Passwords do not match. Please try again!";
+                }
+
+                //then show index page
+            } else {
+//                echo "Oops! Something went wrong. Please try again later.";
+            } // Store the result so we can check if the account exists in the database.
+        } else {
+            echo "Login error";
+        }
+
+    }
+
+} else {
+    echo "Form not submitted correctly.";
 }
+
+function sanitize_input($data)
+{
+    $data = trim($data);
+    $data = stripslashes($data);
+    $data = htmlspecialchars($data);
+    return $data;
+}
+
 ?>
 
 
@@ -33,23 +80,23 @@ if ($stmt = $conn->prepare('SELECT id, password FROM accounts WHERE username = ?
 <body>
 
 <div class="container">
-  <h2>User Login Form</h2>
-  <form action="/action_page.php">
-    <div class="form-group">
-      <label for="email">Email:</label>
-      <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
-    </div>
-    <div class="form-group">
-      <label for="pwd">Password:</label>
-      <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="password">
-    </div>
-    <div class="form-group form-check">
-      <label class="form-check-label">
-        <input class="form-check-input" type="checkbox" name="remember"> Remember me
-      </label>
-    </div>
-    <button type="submit" class="btn btn-primary">Login</button>
-  </form>
+  <h2>User Registration Form</h2>
+    <form method="POST" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" class="form-control" id="username" placeholder="Enter email" name="username">
+        </div>
+        <div class="form-group">
+            <label for="pwd">Password:</label>
+            <input type="password" class="form-control" id="password" placeholder="Enter password" name="password">
+        </div>
+        <div class="form-group form-check">
+            <label class="form-check-label">
+                <input class="form-check-input" type="checkbox" name="remember"> Remember me
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
 </div>
 
 </body>
